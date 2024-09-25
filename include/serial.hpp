@@ -6,6 +6,9 @@
 using namespace std;
 
 vector<vector<float>> generateGaussianKernel(int kernelSize, float sigma);
+
 void applyGaussianBlur(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels, const vector<vector<float>>& kernel);
+
+void convertToGrayscale(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels);
 
 #endif

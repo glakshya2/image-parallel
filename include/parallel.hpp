@@ -9,4 +9,6 @@ void applyGaussianBlur(unsigned char* inputImage, unsigned char* outputImage, in
 
 void applyGaussianBlurCUDAWrapper(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels, const std::vector<std::vector<float>>& kernel);
 
+void applyGrayscaleCUDA(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels);
+
 #endif

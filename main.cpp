@@ -15,17 +15,16 @@
 #include "include/image_io.hpp"
 #include "include/parallel.hpp"
 
-using namespace std;
-
 void printUsage() {
     std::cout << "Usage: ./image-parallel <input_image> <operation>\n";
     std::cout << "Available operations: \n";
     std::cout << "  -blur <kernel size> : Apply Gaussian blur\n";
+    std::cout << "  -gray : Convert to grayscale\n";
     // Add more operations here
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 4) {
+    if (argc < 3) {
         std::cerr << "Error: Missing arguments.\n";
         printUsage();
         return -1;
@@ -50,6 +49,11 @@ int main(int argc, char* argv[]) {
 
 
     if (strcmp(operation, "-blur") == 0) {
+        if (argc < 4) {
+            std::cerr << "Error: Missing arguments.\n";
+            printUsage();
+            return -1;
+        }
         // Gaussian kernel setup
         int kernelSize = stoi(argv[3]);
         float sigma = 1.0f;
@@ -73,8 +77,22 @@ int main(int argc, char* argv[]) {
 
         // Save CUDA output image
         saveImage("output_image_cuda.jpg", outputImageCUDA, width, height, channels);
+    } else if (strcmp(operation, "-gray") == 0) {
+        auto startSerial = std::chrono::high_resolution_clock::now();
+        convertToGrayscale(inputImage, outputImageSerial, width, height, channels);
+        auto endSerial = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> serialTime = endSerial - startSerial;
+        std::cout << "Serial Grayscale Time: " << serialTime.count() << " seconds" << std::endl;
+        
+        saveImage("output_image_serial.jpg", outputImageSerial, width, height, channels);
 
-        std::cout << "Gaussian blur applied using both serial and CUDA. Output images saved." << std::endl;
+        auto startCUDA = std::chrono::high_resolution_clock::now();
+        applyGrayscaleCUDA(inputImage, outputImageCUDA, width, height, channels);
+        auto endCUDA = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> cudaTime = endCUDA - startCUDA;
+        std::cout << "CUDA Grayscale Time: " << cudaTime.count() << " seconds" << std::endl;
+
+        saveImage("output_image_cuda.jpg", outputImageCUDA, width, height, channels);
     } else {
         std::cerr << "Error: Unknown operation '" << operation << "'\n";
         printUsage();
