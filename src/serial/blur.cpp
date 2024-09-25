@@ -10,8 +10,6 @@
 #include "../../include/stb_image.h"
 #include "../../include/stb_image_write.h"
 
-using namespace std;
-
 // Generate Gaussian Kernel
 std::vector<std::vector<float>> generateGaussianKernel(int kernelSize, float sigma) {
     std::vector<std::vector<float>> kernel(kernelSize, std::vector<float>(kernelSize));

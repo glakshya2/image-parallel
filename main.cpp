@@ -1,4 +1,10 @@
-#define STBI_MAX_DIMENSIONS (1 << 30)
+#include <iostream>
+#include <vector>
+#include <filesystem>
+#include <chrono>
+#include <cstring>  // For strcmp
+#include <string>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "include/stb_image.h"
 
@@ -9,17 +15,26 @@
 #include "include/image_io.hpp"
 #include "include/parallel.hpp"
 
-#include <iostream>
-#include <vector>
-#include <filesystem>
-#include <chrono>
 using namespace std;
 
-int main() {
+void printUsage() {
+    std::cout << "Usage: ./image-parallel <input_image> <operation>\n";
+    std::cout << "Available operations: \n";
+    std::cout << "  -blur <kernel size> : Apply Gaussian blur\n";
+    // Add more operations here
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 4) {
+        std::cerr << "Error: Missing arguments.\n";
+        printUsage();
+        return -1;
+    }
+
+    const char* inputFilePath = argv[1];
+    const char* operation = argv[2];
+
     int width, height, channels;
-    const char* inputFilePath = "combined_image.jpg";
-    const char* outputFilePathSerial = "output_image_serial.jpg";
-    const char* outputFilePathCUDA = "output_image_cuda.jpg";
 
     // Load the image
     unsigned char* inputImage = loadImage(inputFilePath, width, height, channels);
@@ -28,41 +43,47 @@ int main() {
         return -1;
     }
 
-    // Create an output image buffer for both methods
+    // Create output image buffers for serial and CUDA
     unsigned char* outputImageSerial = new unsigned char[width * height * channels];
     unsigned char* outputImageCUDA = new unsigned char[width * height * channels];
 
-    // Generate Gaussian kernel (modify kernel size and sigma as needed)
-    int kernelSize = 5;
-    float sigma = 1.0f;
-    std::vector<std::vector<float>> kernel = generateGaussianKernel(kernelSize, sigma);
 
-    // Measure and run the serial Gaussian blur
-    auto startSerial = std::chrono::high_resolution_clock::now();
-    applyGaussianBlur(inputImage, outputImageSerial, width, height, channels, kernel);
-    auto endSerial = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> serialTime = endSerial - startSerial;
-    std::cout << "Serial Gaussian Blur Time: " << serialTime.count() << " seconds" << std::endl;
 
-    // Save the serial output image
-    saveImage(outputFilePathSerial, outputImageSerial, width, height, channels);
+    if (strcmp(operation, "-blur") == 0) {
+        // Gaussian kernel setup
+        int kernelSize = stoi(argv[3]);
+        float sigma = 1.0f;
+        std::vector<std::vector<float>> kernel = generateGaussianKernel(kernelSize, sigma);
+        // Perform Gaussian blur using serial method
+        auto startSerial = std::chrono::high_resolution_clock::now();
+        applyGaussianBlur(inputImage, outputImageSerial, width, height, channels, kernel);
+        auto endSerial = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> serialTime = endSerial - startSerial;
+        std::cout << "Serial Gaussian Blur Time: " << serialTime.count() << " seconds" << std::endl;
 
-    // Measure and run the CUDA Gaussian blur
-    auto startCUDA = std::chrono::high_resolution_clock::now();
-    applyGaussianBlurCUDAWrapper(inputImage, outputImageCUDA, width, height, channels, kernel);
-    auto endCUDA = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> cudaTime = endCUDA - startCUDA;
-    std::cout << "CUDA Gaussian Blur Time: " << cudaTime.count() << " seconds" << std::endl;
+        // Save serial output image
+        saveImage("output_image_serial.jpg", outputImageSerial, width, height, channels);
 
-    // Save the CUDA output image
-    saveImage(outputFilePathCUDA, outputImageCUDA, width, height, channels);
+        // Perform Gaussian blur using CUDA method
+        auto startCUDA = std::chrono::high_resolution_clock::now();
+        applyGaussianBlurCUDAWrapper(inputImage, outputImageCUDA, width, height, channels, kernel);
+        auto endCUDA = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> cudaTime = endCUDA - startCUDA;
+        std::cout << "CUDA Gaussian Blur Time: " << cudaTime.count() << " seconds" << std::endl;
 
-    // Free the memory
+        // Save CUDA output image
+        saveImage("output_image_cuda.jpg", outputImageCUDA, width, height, channels);
+
+        std::cout << "Gaussian blur applied using both serial and CUDA. Output images saved." << std::endl;
+    } else {
+        std::cerr << "Error: Unknown operation '" << operation << "'\n";
+        printUsage();
+    }
+
+    // Free memory
     stbi_image_free(inputImage);
     delete[] outputImageSerial;
     delete[] outputImageCUDA;
-
-    std::cout << "Gaussian blur applied using both serial and CUDA. Output images saved." << std::endl;
 
     return 0;
 }
