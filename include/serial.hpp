@@ -11,4 +11,6 @@ void applyGaussianBlur(unsigned char* inputImage, unsigned char* outputImage, in
 
 void convertToGrayscale(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels);
 
+void comppressImageLossy(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels, int outWidth, int outHeight, int scaleFactor);
+
 #endif

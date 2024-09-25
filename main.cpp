@@ -16,10 +16,11 @@
 #include "include/parallel.hpp"
 
 void printUsage() {
-    std::cout << "Usage: ./image-parallel <input_image> <operation>\n";
-    std::cout << "Available operations: \n";
-    std::cout << "  -blur <kernel size> : Apply Gaussian blur\n";
-    std::cout << "  -gray : Convert to grayscale\n";
+    std::cout << "Usage: ./image-parallel <input_image> <operation>" << std::endl;
+    std::cout << "Available operations: " << std::endl;
+    std::cout << "  -blur <Kernel Size> : Apply Gaussian blur" << std::endl;
+    std::cout << "  -gray : Convert to grayscale" << std::endl;
+    std::cout << "  -compress <Scale Factor> " << std::endl;
     // Add more operations here
 }
 
@@ -41,10 +42,20 @@ int main(int argc, char* argv[]) {
         std::cerr << "Failed to load image!" << std::endl;
         return -1;
     }
+    
+    int argFour = 0;
+    if (argc == 4) {
+        argFour = stoi(argv[3]);
+    }
+    int outWidth, outHeight;
+    if (strcmp(operation, "-compress") == 0) {
+        outWidth = width / argFour;
+        outHeight = height / argFour;
+    }
 
     // Create output image buffers for serial and CUDA
-    unsigned char* outputImageSerial = new unsigned char[width * height * channels];
-    unsigned char* outputImageCUDA = new unsigned char[width * height * channels];
+    unsigned char* outputImageSerial = new unsigned char[outWidth * outHeight * channels];
+    unsigned char* outputImageCUDA = new unsigned char[outWidth * outHeight * channels];
 
 
 
@@ -55,7 +66,7 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         // Gaussian kernel setup
-        int kernelSize = stoi(argv[3]);
+        int kernelSize = argFour;
         float sigma = 1.0f;
         std::vector<std::vector<float>> kernel = generateGaussianKernel(kernelSize, sigma);
         // Perform Gaussian blur using serial method
@@ -93,6 +104,23 @@ int main(int argc, char* argv[]) {
         std::cout << "CUDA Grayscale Time: " << cudaTime.count() << " seconds" << std::endl;
 
         saveImage("output_image_cuda.jpg", outputImageCUDA, width, height, channels);
+    } else if (strcmp(operation, "-compress") == 0) {
+        int scaleFactor = argFour;
+        auto startSerial = std::chrono::high_resolution_clock::now();
+        comppressImageLossy(inputImage, outputImageSerial, width, height, channels, outWidth, outHeight, scaleFactor);
+        auto endSerial = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> serialTime = endSerial - startSerial;
+        std::cout << "Serial Compression Time: " << serialTime.count() << " seconds" << std::endl;
+
+        saveImage("output_image_serial.jpg", outputImageSerial, outWidth, outHeight, channels); 
+
+        auto startCUDA = std::chrono::high_resolution_clock::now();
+        compressImageLossyCUDA(inputImage, outputImageCUDA, width, height, channels, outWidth, outHeight, scaleFactor);
+        auto endCUDA = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> cudaTime = endCUDA - startCUDA;
+        std::cout << "CUDA Compression Time: " << cudaTime.count() << " seconds" << std::endl;
+
+        saveImage("output_image_cuda.jpg", outputImageCUDA, outWidth, outHeight, channels);
     } else {
         std::cerr << "Error: Unknown operation '" << operation << "'\n";
         printUsage();

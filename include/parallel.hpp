@@ -11,4 +11,6 @@ void applyGaussianBlurCUDAWrapper(unsigned char* inputImage, unsigned char* outp
 
 void applyGrayscaleCUDA(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels);
 
+void compressImageLossyCUDA(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels, int outWidth, int outHeight, int scaleFactor);
+
 #endif
