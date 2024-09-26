@@ -3,6 +3,7 @@
 #include <device_launch_parameters.h>
 #include <vector>
 #include <iostream>
+#include <chrono>
 
 __global__ void applyGaussianBlurCUDA(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels, float* d_kernel, int kernelSize) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -62,8 +63,13 @@ void applyGaussianBlurCUDAWrapper(unsigned char* inputImage, unsigned char* outp
     dim3 blockSize(16, 16);  // 16x16 threads per block
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
+    auto start = std::chrono::high_resolution_clock::now();
     // Launch the kernel
     applyGaussianBlurCUDA<<<gridSize, blockSize>>>(d_inputImage, d_outputImage, width, height, channels, d_kernel, kernelSize);
+    auto end = std::chrono::high_resolution_clock::now();
+    cudaDeviceSynchronize();
+    // std::chrono::duration<double> time = end - start;
+    std::cout << "GPU Compute time: " << (std::chrono::duration<double>(end - start)).count() << " seconds" << std::endl; 
 
     // Copy result back to host
     cudaMemcpy(outputImage, d_outputImage, width * height * channels * sizeof(unsigned char), cudaMemcpyDeviceToHost);
@@ -74,3 +80,4 @@ void applyGaussianBlurCUDAWrapper(unsigned char* inputImage, unsigned char* outp
     cudaFree(d_kernel);
     delete[] h_kernel;
 }
+ 

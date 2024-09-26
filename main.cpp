@@ -21,6 +21,8 @@ void printUsage() {
     std::cout << "  -blur <Kernel Size> : Apply Gaussian blur" << std::endl;
     std::cout << "  -gray : Convert to grayscale" << std::endl;
     std::cout << "  -compress <Scale Factor> " << std::endl;
+    std::cout << "  -contrast <Contrast Factor> " << std::endl;
+    std::cout << "  -kalman" << std::endl;
     // Add more operations here
 }
 
@@ -47,7 +49,7 @@ int main(int argc, char* argv[]) {
     if (argc == 4) {
         argFour = stoi(argv[3]);
     }
-    int outWidth, outHeight;
+    int outWidth = width, outHeight = height;
     if (strcmp(operation, "-compress") == 0) {
         outWidth = width / argFour;
         outHeight = height / argFour;
@@ -121,6 +123,39 @@ int main(int argc, char* argv[]) {
         std::cout << "CUDA Compression Time: " << cudaTime.count() << " seconds" << std::endl;
 
         saveImage("output_image_cuda.jpg", outputImageCUDA, outWidth, outHeight, channels);
+    } else if (strcmp(operation, "-contrast") == 0) {
+        float contrastFactor = static_cast<float> (argFour);
+        auto startSerial = std::chrono::high_resolution_clock::now();
+        adjustImageContrast(inputImage, outputImageSerial, contrastFactor, width, height, channels);
+        auto endSerial = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> serialTime = endSerial - startSerial;
+        std::cout << "Serial Contrast Time: " << serialTime.count() << std::endl;
+
+        saveImage("output_image_serial.jpg", outputImageSerial, outWidth, outHeight, channels);
+
+        auto startCUDA = std::chrono::high_resolution_clock::now();
+        contrastAdjustmentCUDA(inputImage, outputImageCUDA, contrastFactor, width, height, channels);
+        auto endCUDA = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> CUDATime = endCUDA - startCUDA;
+        std::cout << "CUDA Contrast Time: " << CUDATime.count() << " seconds" << std::endl;
+
+        saveImage("output_image_cuda.jpg", outputImageCUDA, width, height, channels);
+    } else if (strcmp(operation, "-kalman") == 0) {
+        auto startSerial = std::chrono::high_resolution_clock::now();
+        applykalman(inputImage, outputImageSerial, width, height, channels);
+        auto endSerial = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> serialTime = endSerial - startSerial;
+        std::cout << "Serial Kalman Time: " << serialTime.count() << std::endl;
+
+        saveImage("output_image_serial.jpg", outputImageSerial, width, height, channels);
+
+        auto startCUDA = std::chrono::high_resolution_clock::now();
+        applyKalmanFilterCUDA(inputImage, outputImageCUDA, width, height, channels);
+        auto endCUDA = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> CUDATime = endCUDA - startCUDA;
+        std::cout << "Parallel Kalman Time: " << CUDATime.count() << std::endl;
+
+        saveImage("output_image_cuda.jpg", outputImageCUDA, width, height, channels);
     } else {
         std::cerr << "Error: Unknown operation '" << operation << "'\n";
         printUsage();

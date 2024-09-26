@@ -13,4 +13,8 @@ void applyGrayscaleCUDA(unsigned char* inputImage, unsigned char* outputImage, i
 
 void compressImageLossyCUDA(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels, int outWidth, int outHeight, int scaleFactor);
 
+void contrastAdjustmentCUDA(unsigned char* inputImage, unsigned char* outputImage, float contrastFactor, int width, int height, int channels);
+
+void applyKalmanFilterCUDA(unsigned char* inputImage, unsigned char* outputImage, int width, int height, int channels);
+
 #endif
